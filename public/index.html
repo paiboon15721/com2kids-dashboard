@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Welcome to Firebase Hosting</title>
+
+  <!-- update the version number as needed -->
+  <script defer src="/__/firebase/4.8.2/firebase-app.js"></script>
+  <!-- include only the Firebase features as you need -->
+  <!-- <script defer src="/__/firebase/4.8.2/firebase-auth.js"></script> -->
+  <script defer src="/__/firebase/4.8.2/firebase-database.js"></script>
+  <!-- <script defer src="/__/firebase/4.8.2/firebase-messaging.js"></script> -->
+  <!-- <script defer src="/__/firebase/4.8.2/firebase-storage.js"></script> -->
+  <!-- initialize the SDK after all desired features are loaded -->
+  <script defer src="/__/firebase/init.js"></script>
+  <link rel="stylesheet" href="./main.css">
+
+</head>
+
+<body>
+  <canvas id="pieChart" width="400" height="400"></canvas>
+  <div id="statBySchool">
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/randomcolor/0.5.2/randomColor.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.4/lodash.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      firebase.database().ref('/').on('value', snapshot => {
+        var logs = snapshot.val();
+        console.log(logs);
+        var result = _.map(logs, function (v, k) {
+          return {
+            name: k,
+            start: _.filter(v.usage, function (v) {
+              return v.STARTDT !== undefined;
+            }).length,
+            stop: _.filter(v.usage, function (v) {
+              return v.STOPDT !== undefined;
+            }).length,
+            total: _.size(v.usage)
+          }
+        });
+        var colors = _.map(result, function (x) {
+          return randomColor();
+        });
+        console.log(result);
+        var schoolNames = _.map(result, 'name');
+        var schoolTotals = _.map(result, 'total');
+        var pie = document.getElementById("pieChart").getContext('2d');
+        var pieChart = new Chart(pie, {
+          type: 'pie',
+          data: {
+            datasets: [{
+              data: schoolTotals,
+              backgroundColor: colors
+            }],
+            labels: schoolNames
+          }
+        });
+
+        var i = 0;
+        var rect = 400;
+        var bars = [];
+        result.forEach(function (v) {
+          var elementID = 'canvas' + i++; // Unique ID
+          $('<canvas>').attr({
+            id: elementID
+          }).css({
+            width: rect + 'px',
+            height: rect + 'px'
+          }).appendTo('#statBySchool');
+          var elem = document.getElementById(elementID).getContext('2d');
+          bars.push(new Chart(elem, {
+            type: 'bar',
+            data: {
+              datasets: [{
+                label: 'total',
+                data: [v.start, v.stop],
+                backgroundColor: colors
+              }],
+              labels: ["start", "stop"]
+            },
+            options: {
+              scales: {
+                yAxes: [{
+                  ticks: {
+                    beginAtZero: true
+                  }
+                }]
+              }
+            }
+          }));
+        });
+      });
+    });
+  </script>
+</body>
+
+</html>
